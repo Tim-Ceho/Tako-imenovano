@@ -3,61 +3,74 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Buzzword Bingo Counter</title>
+<title>Buzzword Counter</title>
 <style>
-  :root{--bg:#0f1020;--card:#1a1b33;--ink:#f3f3ff;--mute:#8d8fb5;--a:#ff5fa2;--b:#6c8cff}
+  :root{--bg:#0f1020;--card:#1a1b33;--ink:#f3f3ff;--mute:#8d8fb5;--a:#ff5fa2;--b:#6c8cff;--ok:#4ade80}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
-  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
-  h1{margin:0 0 4px;font-size:1.6rem}
-  .sub{color:var(--mute);margin-bottom:18px}
+  .wrap{max-width:720px;margin:0 auto;padding:16px 16px 60px}
+  a{color:inherit;text-decoration:none}
+  h1{margin:0;font-size:1.3rem} h2{margin:18px 0 10px;font-size:1.3rem} h3{margin:22px 0 8px;font-size:1rem;color:var(--mute);text-transform:uppercase;letter-spacing:.05em}
+  .sub{color:var(--mute);margin:0 0 14px}
   input,button{font:inherit;border-radius:12px;border:0}
-  input{background:var(--card);color:var(--ink);padding:12px 14px;width:100%;outline:2px solid transparent}
+  input{background:var(--card);color:var(--ink);padding:12px 14px;width:100%;outline:2px solid transparent;min-width:0}
   input:focus{outline-color:var(--b)}
-  .row{display:flex;gap:8px;margin-bottom:14px}
+  .row{display:flex;gap:8px;margin-bottom:12px}
   .btn{background:linear-gradient(135deg,var(--a),var(--b));color:#fff;padding:12px 18px;cursor:pointer;font-weight:700;white-space:nowrap}
   .ghost{background:var(--card);color:var(--mute);padding:8px 12px;cursor:pointer;font-size:.85rem}
+  .pill{background:var(--card);padding:4px 10px;border-radius:99px;font-size:.8rem;color:var(--mute)}
+  header{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap}
+  header .r{display:flex;align-items:center;gap:8px}
+  .back{color:var(--mute);font-size:.9rem;display:inline-block;margin-top:8px}
+  .card{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:16px;padding:16px 18px;margin-bottom:10px;font-weight:700;font-size:1.1rem}
+  .card small{display:block;color:var(--mute);font-weight:400;font-size:.8rem;margin-bottom:2px}
+  .empty{color:var(--mute);padding:14px 0}
   .word{position:relative;background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .08s}
   .word:active{transform:scale(.97)}
   .bar{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#ff5fa233,#6c8cff33);width:0;transition:width .3s}
-  .in{position:relative;display:flex;align-items:center;justify-content:space-between;padding:18px 18px}
+  .in{position:relative;display:flex;align-items:center;justify-content:space-between;padding:18px}
   .label{font-size:1.25rem;font-weight:700}
-  .count{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums}
-  .x{background:none;color:var(--mute);cursor:pointer;font-size:1rem;padding:4px 8px;margin-left:8px}
+  .right{display:flex;align-items:center;gap:6px}
+  .count{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums;min-width:1.5ch;text-align:right}
+  .x,.minus{background:none;color:var(--mute);cursor:pointer;font-size:1rem;padding:4px 10px}
+  .minus{background:#ffffff10;border-radius:10px;font-weight:700}
   .bump{animation:bump .25s}
   @keyframes bump{50%{transform:scale(1.25);color:var(--a)}}
   .pop{position:fixed;pointer-events:none;font-size:1.6rem;animation:up .8s forwards}
   @keyframes up{to{transform:translateY(-90px);opacity:0}}
-  .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
-  .pill{background:var(--card);padding:6px 12px;border-radius:99px;font-size:.85rem;color:var(--mute)}
-  #join{text-align:center;padding-top:15vh}
+  .prop{display:flex;justify-content:space-between;align-items:center;background:var(--card);border-radius:12px;padding:10px 14px;margin-bottom:8px}
+  .prop small{color:var(--mute)}
+  .ok{background:none;color:var(--ok);cursor:pointer;font-size:1.1rem;padding:4px 10px}
+  #login{text-align:center;padding-top:12vh}
+  #login details{margin-top:28px;color:var(--mute)}
+  #login summary{cursor:pointer}
+  .err{color:var(--a);min-height:1.2em;margin:6px 0}
 </style>
 </head>
 <body>
-<div class="wrap">
+<div class="wrap" id="appWrap" hidden>
+  <header>
+    <h1><a href="#/">🎯 Buzzword Counter</a></h1>
+    <span class="r"><span class="pill" id="adminTag" hidden>admin</span><b id="who"></b><button class="ghost" id="out">Sign out</button></span>
+  </header>
+  <main id="main"></main>
+</div>
 
-  <div id="join" hidden>
-    <h1>🎯 Buzzword Counter</h1>
-    <p class="sub">Enter a room code. Everyone with the same code counts together.</p>
-    <div class="row"><input id="code" placeholder="e.g. prog-101" maxlength="30"><button class="btn" id="go">Join</button></div>
-  </div>
-
-  <div id="app" hidden>
-    <h1>🎯 Buzzword Counter</h1>
-    <div class="top">
-      <span class="pill">Room: <b id="roomName"></b> · <span id="online">1</span> online</span>
-      <span><button class="ghost" id="share">Copy link</button> <button class="ghost" id="reset">Reset counts</button></span>
-    </div>
-    <div class="row"><input id="newWord" placeholder="Add a word (e.g. basically)" maxlength="30"><button class="btn" id="add">Add</button></div>
-    <div id="list"></div>
-    <p class="sub">Tap a word every time the teacher says it.</p>
-  </div>
+<div class="wrap" id="login" hidden>
+  <h1>🎯 Buzzword Counter</h1>
+  <p class="sub">Pick a username to join.</p>
+  <div class="row"><input id="uname" placeholder="Your name" maxlength="20" autocomplete="off"><button class="btn" id="join">Join</button></div>
+  <details>
+    <summary>Admin login</summary>
+    <div class="row" style="margin-top:10px"><input id="pw" type="password" placeholder="Admin password"><button class="btn" id="adminGo">Log in</button></div>
+  </details>
+  <div class="err" id="loginErr"></div>
 </div>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 <script>
-// 1) PASTE YOUR FIREBASE CONFIG HERE (Project settings → Your apps → Web)
 const firebaseConfig = {
   apiKey: "AIzaSyALd0mU-_tUxm9rocwdF4KjyY5VFD33m4c",
   authDomain: "tako-imenovano.firebaseapp.com",
@@ -67,81 +80,209 @@ const firebaseConfig = {
   messagingSenderId: "1017782975720",
   appId: "1:1017782975720:web:912a36973d5fd5fbbf9d5d"
 };
+// The admin account: create this user in Firebase → Authentication → Users (any password).
+const ADMIN_EMAIL = 'admin@tako-imenovano.app';
 
 if (typeof firebase === 'undefined') {
-  document.body.innerHTML = '<div style="padding:30px;font-family:system-ui;color:#fff">⚠️ Firebase failed to load. Open this page from your GitHub Pages link (or a normal browser tab with internet), and disable any ad/script blocker for it.</div>';
+  document.body.innerHTML = '<div style="padding:30px;font-family:system-ui;color:#fff">⚠️ Firebase failed to load. Open this page in a normal browser tab with internet and disable script blockers.</div>';
   throw new Error('Firebase SDK did not load');
 }
 firebase.initializeApp(firebaseConfig);
-const db = firebase.database();
+const auth = firebase.auth(), db = firebase.database();
 const $ = id => document.getElementById(id);
-const clean = s => s.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-').slice(0,30);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmtDate = d => { try { return new Date(d + 'T00:00').toLocaleDateString(undefined, {weekday:'short', day:'numeric', month:'short', year:'numeric'}); } catch { return d; } };
+const today = () => new Date().toLocaleDateString('sv-SE');
+const SV = firebase.database.ServerValue;
 
-let room = clean(decodeURIComponent(location.hash.slice(1)));
-if (!room) { $('join').hidden = false; }
-else start();
+let user = null, isAdmin = false, myName = '', offs = [], seq = 0;
+const listen = (ref, fn) => { ref.on('value', fn); offs.push(() => ref.off('value', fn)); };
+const clearListeners = () => { offs.forEach(f => f()); offs = []; };
+const empty = t => `<div class="empty">${t}</div>`;
+const addForm = (ph, id, extra = '') => `<div class="row">${extra}<input id="${id}" placeholder="${ph}" maxlength="40"><button class="btn" id="${id}Btn">Add</button></div>`;
+function onSubmit(id, fn) {
+  const go = () => { const v = $(id).value.trim(); if (v) { fn(v); $(id).value = ''; } };
+  $(id + 'Btn').onclick = go; $(id).onkeydown = e => { if (e.key === 'Enter') go(); };
+}
 
-$('go').onclick = () => { const c = clean($('code').value); if (c) { location.hash = c; location.reload(); } };
-$('code').onkeydown = e => { if (e.key === 'Enter') $('go').click(); };
+/* ---------- auth ---------- */
+auth.onAuthStateChanged(u => { user = u; afterAuth(); });
 
-function start() {
-  $('app').hidden = false;
-  $('roomName').textContent = room;
-  const wordsRef = db.ref('rooms/' + room + '/words');
+async function afterAuth() {
+  const my = ++seq;
+  if (!user) return showLogin();
+  isAdmin = user.email === ADMIN_EMAIL;
+  if (isAdmin) myName = 'Admin';
+  else myName = (await db.ref('users/' + user.uid + '/name').once('value').catch(() => null))?.val() || '';
+  if (my !== seq) return;
+  if (!myName) return showLogin();
+  $('login').hidden = true; $('appWrap').hidden = false;
+  $('who').textContent = myName; $('adminTag').hidden = !isAdmin;
+  route();
+}
+function showLogin() {
+  clearListeners();
+  $('appWrap').hidden = true; $('login').hidden = false;
+}
+$('join').onclick = async () => {
+  const name = $('uname').value.trim().slice(0, 20);
+  if (!name) return;
+  $('loginErr').textContent = '';
+  try {
+    if (!auth.currentUser) await auth.signInAnonymously();
+    await db.ref('users/' + auth.currentUser.uid).set({ name });
+    user = auth.currentUser; afterAuth();
+  } catch (e) {
+    $('loginErr').textContent = e.code === 'auth/admin-restricted-operation'
+      ? 'Anonymous sign-in is not enabled in Firebase (Authentication → Sign-in method).' : e.message;
+  }
+};
+$('uname').onkeydown = e => { if (e.key === 'Enter') $('join').click(); };
+$('adminGo').onclick = async () => {
+  $('loginErr').textContent = '';
+  try { await auth.signInWithEmailAndPassword(ADMIN_EMAIL, $('pw').value); $('pw').value = ''; }
+  catch (e) { $('loginErr').textContent = 'Admin login failed: ' + (e.code || e.message); }
+};
+$('pw').onkeydown = e => { if (e.key === 'Enter') $('adminGo').click(); };
+$('out').onclick = () => auth.signOut();
 
-  // presence
-  const me = db.ref('rooms/' + room + '/presence').push();
-  db.ref('.info/connected').on('value', s => { if (s.val()) { me.onDisconnect().remove(); me.set(true); } });
-  db.ref('rooms/' + room + '/presence').on('value', s => $('online').textContent = s.numChildren());
+/* ---------- routing ---------- */
+window.onhashchange = () => { if (user && myName) route(); };
+function route() {
+  clearListeners();
+  const h = location.hash.replace(/^#\/?/, '').split('/');
+  if (h[0] === 'c' && h[1] && h[2] === 'l' && h[3]) return lectureView(h[1], h[3]);
+  if (h[0] === 'c' && h[1]) return classView(h[1]);
+  homeView();
+}
 
-  const prev = {};
-  wordsRef.on('value', snap => {
-    const data = snap.val() || {};
-    const max = Math.max(1, ...Object.values(data).map(w => w.count || 0));
-    const list = $('list');
-    for (const id of Object.keys(data)) {
-      let el = document.getElementById('w-' + id);
-      if (!el) {
-        el = document.createElement('div');
-        el.className = 'word'; el.id = 'w-' + id;
-        el.innerHTML = '<div class="bar"></div><div class="in"><span class="label"></span><span><span class="count">0</span><button class="x" title="Remove">✕</button></span></div>';
-        el.onclick = e => {
-          if (e.target.classList.contains('x')) { if (confirm('Remove this word?')) wordsRef.child(id).remove(); return; }
-          wordsRef.child(id).child('count').set(firebase.database.ServerValue.increment(1));
-          pop(e.clientX, e.clientY);
-        };
-        list.appendChild(el);
-      }
-      const w = data[id];
-      el.querySelector('.label').textContent = w.label;
-      const c = el.querySelector('.count');
-      if (prev[id] !== undefined && prev[id] !== (w.count || 0)) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
-      c.textContent = w.count || 0;
-      prev[id] = w.count || 0;
-      el.querySelector('.bar').style.width = ((w.count || 0) / max * 100) + '%';
-    }
-    [...list.children].forEach(el => { if (!data[el.id.slice(2)]) el.remove(); });
+/* ---------- views ---------- */
+function homeView() {
+  $('main').innerHTML = `<h2>Classes</h2>${isAdmin ? addForm('New class name', 'nc') : ''}<div id="list"></div>`;
+  if (isAdmin) onSubmit('nc', name => db.ref('classes').push({ name }));
+  listen(db.ref('classes'), s => {
+    const d = s.val() || {};
+    $('list').innerHTML = Object.entries(d).sort((a, b) => a[1].name.localeCompare(b[1].name))
+      .map(([id, c]) => `<a class="card" href="#/c/${id}"><span>${esc(c.name)}</span>${isAdmin ? `<button class="x" data-del="${id}">✕</button>` : '→'}</a>`).join('')
+      || empty('No classes yet.' + (isAdmin ? '' : ' Ask your admin to create one.'));
+  });
+  $('list').onclick = async e => {
+    const id = e.target.dataset.del; if (!id) return;
+    e.preventDefault();
+    if (!confirm('Delete this class with all its lectures and counts?')) return;
+    const up = { ['classes/' + id]: null, ['lectures/' + id]: null };
+    const ls = (await db.ref('lectures/' + id).once('value')).val() || {};
+    Object.keys(ls).forEach(l => { up['words/' + l] = null; up['proposals/' + l] = null; });
+    db.ref().update(up);
+  };
+}
+
+function classView(cid) {
+  $('main').innerHTML = `<a class="back" href="#/">← All classes</a><h2 id="cname">…</h2>
+    ${isAdmin ? addForm('Lecture title (optional)', 'nl', `<input type="date" id="ndate" value="${today()}" style="max-width:170px">`) : ''}
+    <div id="list"></div>`;
+  listen(db.ref('classes/' + cid + '/name'), s => $('cname').textContent = s.val() || 'Class');
+  if (isAdmin) {
+    $('nl').onkeydown = e => { if (e.key === 'Enter') $('nlBtn').click(); };
+    $('nlBtn').onclick = () => {
+      const date = $('ndate').value || today();
+      db.ref('lectures/' + cid).push({ title: $('nl').value.trim(), date }); $('nl').value = '';
+    };
+  }
+  listen(db.ref('lectures/' + cid), s => {
+    const d = s.val() || {};
+    $('list').innerHTML = Object.entries(d).sort((a, b) => (b[1].date || '').localeCompare(a[1].date || ''))
+      .map(([id, l]) => `<a class="card" href="#/c/${cid}/l/${id}"><span><small>${esc(fmtDate(l.date))}</small>${esc(l.title || 'Lecture')}</span>${isAdmin ? `<button class="x" data-del="${id}">✕</button>` : '→'}</a>`).join('')
+      || empty('No lectures yet.');
+  });
+  $('list').onclick = e => {
+    const id = e.target.dataset.del; if (!id) return;
+    e.preventDefault();
+    if (!confirm('Delete this lecture and its counts?')) return;
+    db.ref().update({ ['lectures/' + cid + '/' + id]: null, ['words/' + id]: null, ['proposals/' + id]: null });
+  };
+}
+
+function lectureView(cid, lid) {
+  $('main').innerHTML = `<a class="back" href="#/c/${cid}">← <span id="bc">Class</span></a>
+    <h2 id="ltitle">…</h2><p class="sub" id="ldate"></p>
+    ${isAdmin ? addForm('Add a word to count', 'nw') : ''}
+    <div id="words"></div>
+    ${isAdmin ? '<button class="ghost" id="reset">Reset all counts</button>' : ''}
+    <h3>Suggest a word</h3>
+    <div class="row"><input id="sw" placeholder="e.g. basically" maxlength="30"><button class="btn" id="swBtn">Suggest</button></div>
+    <div id="props"></div>`;
+  listen(db.ref('classes/' + cid + '/name'), s => $('bc').textContent = s.val() || 'Class');
+  listen(db.ref('lectures/' + cid + '/' + lid), s => {
+    const l = s.val() || {};
+    $('ltitle').textContent = l.title || 'Lecture'; $('ldate').textContent = l.date ? fmtDate(l.date) : '';
   });
 
-  const add = () => {
-    const label = $('newWord').value.trim();
-    if (!label) return;
-    wordsRef.push({ label, count: 0 });
-    $('newWord').value = '';
+  // words
+  const wl = $('words'), prev = {}; let wordsNow = {};
+  listen(db.ref('words/' + lid), s => {
+    const d = wordsNow = s.val() || {};
+    const max = Math.max(1, ...Object.values(d).map(w => w.count || 0));
+    for (const [id, w] of Object.entries(d)) {
+      let el = wl.querySelector(`[data-id="${id}"]`);
+      if (!el) {
+        el = document.createElement('div'); el.className = 'word'; el.dataset.id = id;
+        el.innerHTML = `<div class="bar"></div><div class="in"><span class="label"></span><span class="right"><button class="minus" data-act="minus" title="Undo one">−</button><span class="count">0</span>${isAdmin ? '<button class="x" data-act="del">✕</button>' : ''}</span></div>`;
+        wl.appendChild(el);
+      }
+      const n = w.count || 0, c = el.querySelector('.count');
+      el.querySelector('.label').textContent = w.label;
+      if (prev[id] !== undefined && prev[id] !== n) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+      c.textContent = n; prev[id] = n;
+      el.querySelector('.bar').style.width = (n / max * 100) + '%';
+    }
+    [...wl.querySelectorAll('.word')].forEach(el => { if (!d[el.dataset.id]) { el.remove(); delete prev[el.dataset.id]; } });
+    let e = wl.querySelector('.empty');
+    if (!Object.keys(d).length) { if (!e) wl.insertAdjacentHTML('beforeend', empty('No words yet. Suggest one below!')); }
+    else if (e) e.remove();
+  });
+  wl.onclick = e => {
+    const el = e.target.closest('.word'); if (!el) return;
+    const ref = db.ref('words/' + lid + '/' + el.dataset.id), act = e.target.dataset.act;
+    if (act === 'del') { if (confirm('Remove this word?')) ref.remove(); return; }
+    const inc = act === 'minus' ? -1 : 1;
+    ref.child('count').set(SV.increment(inc)).catch(() => {});
+    if (inc > 0) pop(e.clientX, e.clientY);
   };
-  $('add').onclick = add;
-  $('newWord').onkeydown = e => { if (e.key === 'Enter') add(); };
+  if (isAdmin) {
+    onSubmit('nw', label => db.ref('words/' + lid).push({ label, count: 0 }));
+    $('reset').onclick = () => {
+      if (!confirm('Reset all counts to 0 for everyone?')) return;
+      const up = {}; Object.keys(wordsNow).forEach(id => up[id + '/count'] = 0);
+      db.ref('words/' + lid).update(up);
+    };
+  }
 
-  $('reset').onclick = () => {
-    if (!confirm('Reset all counts to 0 for everyone?')) return;
-    wordsRef.once('value').then(s => s.forEach(c => c.ref.child('count').set(0)));
+  // proposals
+  let propsNow = {};
+  const suggest = () => {
+    const label = $('sw').value.trim(); if (!label) return;
+    db.ref('proposals/' + lid).push({ label, by: myName, ts: SV.TIMESTAMP }).catch(() => {});
+    $('sw').value = '';
   };
-  $('share').onclick = () => { navigator.clipboard.writeText(location.href); $('share').textContent = 'Copied ✓'; setTimeout(() => $('share').textContent = 'Copy link', 1500); };
+  $('swBtn').onclick = suggest; $('sw').onkeydown = e => { if (e.key === 'Enter') suggest(); };
+  listen(db.ref('proposals/' + lid), s => {
+    const d = propsNow = s.val() || {};
+    $('props').innerHTML = Object.entries(d).map(([id, p]) => `<div class="prop"><span><b>${esc(p.label)}</b> <small>by ${esc(p.by)}</small></span>${isAdmin ? `<span><button class="ok" data-act="ok" data-id="${id}">✓</button><button class="x" data-act="no" data-id="${id}">✕</button></span>` : ''}</div>`).join('')
+      || empty('No suggestions yet.');
+  });
+  $('props').onclick = e => {
+    const id = e.target.dataset.id, act = e.target.dataset.act; if (!id) return;
+    const p = propsNow[id]; if (!p) return;
+    if (act === 'ok' && !Object.values(wordsNow).some(w => w.label.toLowerCase() === p.label.toLowerCase()))
+      db.ref('words/' + lid).push({ label: p.label, count: 0 });
+    db.ref('proposals/' + lid + '/' + id).remove();
+  };
 }
 
 function pop(x, y) {
   const e = document.createElement('div');
-  e.className = 'pop'; e.textContent = ['🔥','✨','🎉','💥','😂'][Math.floor(Math.random()*5)];
+  e.className = 'pop'; e.textContent = ['🔥','✨','🎉','💥','😂'][Math.floor(Math.random() * 5)];
   e.style.left = (x - 10) + 'px'; e.style.top = (y - 20) + 'px';
   document.body.appendChild(e); setTimeout(() => e.remove(), 800);
 }

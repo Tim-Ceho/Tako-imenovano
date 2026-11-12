@@ -1,0 +1,44 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid",
+        "name": { ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 20" }
+      }
+    },
+    "classes": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'admin@tako-imenovano.app'"
+    },
+    "lectures": {
+      ".read": "auth != null",
+      ".write": "auth != null && auth.token.email === 'admin@tako-imenovano.app'"
+    },
+    "words": {
+      "$lid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.email === 'admin@tako-imenovano.app'",
+        "$wid": {
+          ".validate": "newData.hasChildren(['label', 'count'])",
+          "count": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber() && newData.val() >= 0"
+          }
+        }
+      }
+    },
+    "proposals": {
+      "$lid": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.token.email === 'admin@tako-imenovano.app'",
+        "$pid": {
+          ".write": "auth != null && !data.exists() && newData.exists()",
+          ".validate": "newData.hasChildren(['label', 'by']) && newData.child('label').val().length <= 30"
+        }
+      }
+    }
+  }
+}
