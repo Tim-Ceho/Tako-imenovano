@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Buzzword Bingo Counter</title>
+<style>
+  :root{--bg:#0f1020;--card:#1a1b33;--ink:#f3f3ff;--mute:#8d8fb5;--a:#ff5fa2;--b:#6c8cff}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,sans-serif;background:var(--bg);color:var(--ink);min-height:100vh}
+  .wrap{max-width:720px;margin:0 auto;padding:20px 16px 60px}
+  h1{margin:0 0 4px;font-size:1.6rem}
+  .sub{color:var(--mute);margin-bottom:18px}
+  input,button{font:inherit;border-radius:12px;border:0}
+  input{background:var(--card);color:var(--ink);padding:12px 14px;width:100%;outline:2px solid transparent}
+  input:focus{outline-color:var(--b)}
+  .row{display:flex;gap:8px;margin-bottom:14px}
+  .btn{background:linear-gradient(135deg,var(--a),var(--b));color:#fff;padding:12px 18px;cursor:pointer;font-weight:700;white-space:nowrap}
+  .ghost{background:var(--card);color:var(--mute);padding:8px 12px;cursor:pointer;font-size:.85rem}
+  .word{position:relative;background:var(--card);border-radius:16px;margin-bottom:10px;overflow:hidden;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;transition:transform .08s}
+  .word:active{transform:scale(.97)}
+  .bar{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#ff5fa233,#6c8cff33);width:0;transition:width .3s}
+  .in{position:relative;display:flex;align-items:center;justify-content:space-between;padding:18px 18px}
+  .label{font-size:1.25rem;font-weight:700}
+  .count{font-size:2rem;font-weight:800;font-variant-numeric:tabular-nums}
+  .x{background:none;color:var(--mute);cursor:pointer;font-size:1rem;padding:4px 8px;margin-left:8px}
+  .bump{animation:bump .25s}
+  @keyframes bump{50%{transform:scale(1.25);color:var(--a)}}
+  .pop{position:fixed;pointer-events:none;font-size:1.6rem;animation:up .8s forwards}
+  @keyframes up{to{transform:translateY(-90px);opacity:0}}
+  .top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:14px;flex-wrap:wrap}
+  .pill{background:var(--card);padding:6px 12px;border-radius:99px;font-size:.85rem;color:var(--mute)}
+  #join{text-align:center;padding-top:15vh}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div id="join" hidden>
+    <h1>🎯 Buzzword Counter</h1>
+    <p class="sub">Enter a room code. Everyone with the same code counts together.</p>
+    <div class="row"><input id="code" placeholder="e.g. prog-101" maxlength="30"><button class="btn" id="go">Join</button></div>
+  </div>
+
+  <div id="app" hidden>
+    <h1>🎯 Buzzword Counter</h1>
+    <div class="top">
+      <span class="pill">Room: <b id="roomName"></b> · <span id="online">1</span> online</span>
+      <span><button class="ghost" id="share">Copy link</button> <button class="ghost" id="reset">Reset counts</button></span>
+    </div>
+    <div class="row"><input id="newWord" placeholder="Add a word (e.g. basically)" maxlength="30"><button class="btn" id="add">Add</button></div>
+    <div id="list"></div>
+    <p class="sub">Tap a word every time the teacher says it.</p>
+  </div>
+</div>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script>
+// 1) PASTE YOUR FIREBASE CONFIG HERE (Project settings → Your apps → Web)
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_PROJECT.firebaseapp.com",
+  databaseURL: "https://YOUR_PROJECT-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "YOUR_PROJECT",
+  appId: "YOUR_APP_ID"
+};
+
+if (typeof firebase === 'undefined') {
+  document.body.innerHTML = '<div style="padding:30px;font-family:system-ui;color:#fff">⚠️ Firebase failed to load. Open this page from your GitHub Pages link (or a normal browser tab with internet), and disable any ad/script blocker for it.</div>';
+  throw new Error('Firebase SDK did not load');
+}
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const $ = id => document.getElementById(id);
+const clean = s => s.trim().toLowerCase().replace(/[^a-z0-9_-]/g,'-').slice(0,30);
+
+let room = clean(decodeURIComponent(location.hash.slice(1)));
+if (!room) { $('join').hidden = false; }
+else start();
+
+$('go').onclick = () => { const c = clean($('code').value); if (c) { location.hash = c; location.reload(); } };
+$('code').onkeydown = e => { if (e.key === 'Enter') $('go').click(); };
+
+function start() {
+  $('app').hidden = false;
+  $('roomName').textContent = room;
+  const wordsRef = db.ref('rooms/' + room + '/words');
+
+  // presence
+  const me = db.ref('rooms/' + room + '/presence').push();
+  db.ref('.info/connected').on('value', s => { if (s.val()) { me.onDisconnect().remove(); me.set(true); } });
+  db.ref('rooms/' + room + '/presence').on('value', s => $('online').textContent = s.numChildren());
+
+  const prev = {};
+  wordsRef.on('value', snap => {
+    const data = snap.val() || {};
+    const max = Math.max(1, ...Object.values(data).map(w => w.count || 0));
+    const list = $('list');
+    for (const id of Object.keys(data)) {
+      let el = document.getElementById('w-' + id);
+      if (!el) {
+        el = document.createElement('div');
+        el.className = 'word'; el.id = 'w-' + id;
+        el.innerHTML = '<div class="bar"></div><div class="in"><span class="label"></span><span><span class="count">0</span><button class="x" title="Remove">✕</button></span></div>';
+        el.onclick = e => {
+          if (e.target.classList.contains('x')) { if (confirm('Remove this word?')) wordsRef.child(id).remove(); return; }
+          wordsRef.child(id).child('count').set(firebase.database.ServerValue.increment(1));
+          pop(e.clientX, e.clientY);
+        };
+        list.appendChild(el);
+      }
+      const w = data[id];
+      el.querySelector('.label').textContent = w.label;
+      const c = el.querySelector('.count');
+      if (prev[id] !== undefined && prev[id] !== (w.count || 0)) { c.classList.remove('bump'); void c.offsetWidth; c.classList.add('bump'); }
+      c.textContent = w.count || 0;
+      prev[id] = w.count || 0;
+      el.querySelector('.bar').style.width = ((w.count || 0) / max * 100) + '%';
+    }
+    [...list.children].forEach(el => { if (!data[el.id.slice(2)]) el.remove(); });
+  });
+
+  const add = () => {
+    const label = $('newWord').value.trim();
+    if (!label) return;
+    wordsRef.push({ label, count: 0 });
+    $('newWord').value = '';
+  };
+  $('add').onclick = add;
+  $('newWord').onkeydown = e => { if (e.key === 'Enter') add(); };
+
+  $('reset').onclick = () => {
+    if (!confirm('Reset all counts to 0 for everyone?')) return;
+    wordsRef.once('value').then(s => s.forEach(c => c.ref.child('count').set(0)));
+  };
+  $('share').onclick = () => { navigator.clipboard.writeText(location.href); $('share').textContent = 'Copied ✓'; setTimeout(() => $('share').textContent = 'Copy link', 1500); };
+}
+
+function pop(x, y) {
+  const e = document.createElement('div');
+  e.className = 'pop'; e.textContent = ['🔥','✨','🎉','💥','😂'][Math.floor(Math.random()*5)];
+  e.style.left = (x - 10) + 'px'; e.style.top = (y - 20) + 'px';
+  document.body.appendChild(e); setTimeout(() => e.remove(), 800);
+}
+</script>
+</body>
+</html>
